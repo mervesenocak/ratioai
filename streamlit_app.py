@@ -1,70 +1,80 @@
-import streamlit as st
+import json
 import requests
+import streamlit as st
 
-st.set_page_config(page_title="RatioAI Hakim Simülasyonu", layout="wide")
-st.title("⚖️ RatioAI — Hâkim Simülasyonu (Ollama + RAG)")
+st.set_page_config(page_title="RatioAI Demo", page_icon="⚖️", layout="wide")
 
-api_url = st.sidebar.text_input("API URL", "http://127.0.0.1:8000")
+st.title("⚖️ RatioAI — Hakim Simülasyonu (Demo)")
+st.caption("Kısa karar + deliller → Gerekçeli karar")
 
-dava_turu = st.selectbox("Davanın Türü", ["OZEL_HUKUK", "CEZA"])
-kisa_karar = st.text_area("Kısa Karar", height=220, placeholder="Kısa karar metnini buraya yapıştır...")
+API_BASE = "http://127.0.0.1:8000"
+endpoint = f"{API_BASE}/generate"
 
-ceza_puanlari = None
-if dava_turu == "CEZA":
-    st.subheader("Ceza Takdir Puanları (0–10)")
-    c1, c2, c3, c4, c5 = st.columns(5)
-    kast_taksir = c1.number_input("Kast/Taksir", 0, 10, 5)
-    gecmis = c2.number_input("Geçmiş", 0, 10, 5)
-    islenis = c3.number_input("İşleniş", 0, 10, 5)
-    magdur = c4.number_input("Mağdur Etki", 0, 10, 5)
-    toplum = c5.number_input("Toplumsal Zarar", 0, 10, 5)
-    ceza_puanlari = {
-        "kast_taksir": int(kast_taksir),
-        "gecmis": int(gecmis),
-        "islenis_sekli": int(islenis),
-        "magdur_etki": int(magdur),
-        "toplumsal_zarar": int(toplum),
-    }
+st.sidebar.header("Ayarlar")
+dava_turu = st.sidebar.selectbox("Dava Türü", ["OZEL_HUKUK", "CEZA"])
 
-st.subheader("Deliller (opsiyonel)")
-delil_sayisi = st.number_input("Delil sayısı", min_value=0, max_value=20, value=0, step=1)
+st.markdown("## Kısa Karar")
+kisa_karar = st.text_area(
+    "Kısa Karar Metni",
+    height=200,
+    placeholder="Davacı, davalının kira bedelini ödemediğini ileri sürerek tahliye talep etmiştir..."
+)
 
-deliller = []
-for i in range(int(delil_sayisi)):
-    c1, c2 = st.columns([1, 3])
-    name = c1.text_input(f"Delil {i+1} adı", key=f"name_{i}")
-    content = c2.text_input(f"Delil {i+1} içeriği", key=f"content_{i}")
-    if name and content:
-        deliller.append({"name": name, "content": content})
+st.markdown("## Deliller")
 
-if st.button("Gerekçeli Kararı Üret"):
-    payload = {
-        "kisa_karar": kisa_karar,
-        "dava_turu": dava_turu,
-        "deliller": deliller or None,
-        "ceza_puanlari": ceza_puanlari,
-    }
-    r = requests.post(f"{api_url}/generate", json=payload, timeout=180)
-    if r.status_code != 200:
-        st.error(f"Hata: {r.status_code}\n{r.text}")
+if "deliller" not in st.session_state:
+    st.session_state.deliller = [
+        {"name": "Kira Sözleşmesi", "content": "Taraflar arasında 01.01.2022 tarihli kira sözleşmesi"},
+        {"name": "Banka Kaydı", "content": "Ödenmeyen aylara ilişkin banka hesap dökümü"},
+    ]
+
+for i, d in enumerate(st.session_state.deliller):
+    with st.expander(f"Delil {i+1}"):
+        d["name"] = st.text_input("Delil Adı", d["name"], key=f"name_{i}")
+        d["content"] = st.text_area("Delil İçeriği", d["content"], key=f"content_{i}")
+
+if st.button("➕ Delil Ekle"):
+    st.session_state.deliller.append({"name": "", "content": ""})
+    st.experimental_rerun()
+
+st.markdown("---")
+
+if st.button("🚀 Gerekçeli Karar Üret"):
+    if not kisa_karar.strip():
+        st.error("Kısa karar boş olamaz.")
     else:
-        data = r.json()
+        payload = {
+            "dava_turu": dava_turu,
+            "kisa_karar": kisa_karar,
+            "deliller": [
+                {"name": d["name"], "content": d["content"]}
+                for d in st.session_state.deliller
+                if d["name"] and d["content"]
+            ]
+        }
 
-        st.subheader("📄 Gerekçeli Karar")
-        st.text_area("Çıktı", data["gerekceli_karar"], height=420)
+        with st.spinner("Karar üretiliyor..."):
+            r = requests.post(endpoint, json=payload)
 
-        st.subheader("🔎 Kullanılan Kaynaklar")
-        colA, colB = st.columns(2)
-        with colA:
-            st.markdown("**Kanun Maddeleri**")
-            for d in data["used_laws"]:
-                demo = " (DEMO)" if d["meta"].get("demo") else ""
-                st.markdown(f"- **{d['id']}**{demo}: {d['title']}")
-        with colB:
-            st.markdown("**İçtihatlar**")
-            for d in data["used_precedents"]:
-                demo = " (DEMO)" if d["meta"].get("demo") else ""
-                st.markdown(f"- **{d['id']}**{demo}: {d['title']}")
+        if r.status_code != 200:
+            st.error(f"Hata: {r.status_code}")
+            st.code(r.text)
+        else:
+            data = r.json()
+            st.success("Karar üretildi")
 
-        if data.get("warnings"):
-            st.warning("Uyarılar:\n- " + "\n- ".join(data["warnings"]))
+            st.markdown("## Gerekçeli Karar")
+            st.text_area("", data.get("gerekceli_karar", ""), height=400)
+
+            st.markdown("### Kullanılan Kanunlar")
+            for k in data.get("used_laws", []):
+                st.write(f"- {k.get('title','')}")
+
+            st.markdown("### Kullanılan İçtihatlar")
+            for i in data.get("used_precedents", []):
+                st.write(f"- {i.get('title','')}")
+
+            if data.get("warnings"):
+                st.markdown("### Uyarılar")
+                for w in data["warnings"]:
+                    st.warning(w)
