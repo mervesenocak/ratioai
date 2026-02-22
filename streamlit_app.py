@@ -1,5 +1,5 @@
 import io
-import json
+import os
 import textwrap
 import requests
 import streamlit as st
@@ -10,6 +10,15 @@ from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen import canvas
 
 from pypdf import PdfReader
+
+
+# ---------------------------
+# Config
+# ---------------------------
+
+# Render'da UI servisine Environment Variable olarak şunu vereceğiz:
+# API_BASE_URL = https://ratioai.onrender.com
+API_BASE_URL = os.getenv("API_BASE_URL", "http://127.0.0.1:8000").rstrip("/")
 
 
 # ---------------------------
@@ -29,18 +38,14 @@ def extract_text_from_pdf(uploaded_file) -> str:
 
 
 def make_pdf_bytes(title: str, content: str) -> bytes:
-    """Text -> PDF bytes (A4). Uses DejaVuSans if available for Turkish chars."""
+    """Text -> PDF bytes (A4). Uses a font supporting Turkish chars if available."""
     buffer = io.BytesIO()
     c = canvas.Canvas(buffer, pagesize=A4)
     width, height = A4
 
-    # Try register a font that supports Turkish characters
-    # If it fails, fallback to Helvetica (some chars may break)
     font_name = "Helvetica"
     try:
-        # Common Windows path; you can adjust if needed
-        # You can also place DejaVuSans.ttf inside project and reference relative path
-        import os
+        # Optional: try register a font that supports Turkish characters
         candidates = [
             r"C:\Windows\Fonts\DejaVuSans.ttf",
             r"C:\Windows\Fonts\arial.ttf",
@@ -63,14 +68,20 @@ def make_pdf_bytes(title: str, content: str) -> bytes:
 
     c.setFont(font_name, 10)
 
-    # Wrap lines to fit page width (rough)
     max_chars = 110
     lines = []
     for para in (content or "").splitlines():
         if not para.strip():
             lines.append("")
             continue
-        lines.extend(textwrap.wrap(para, width=max_chars, break_long_words=False, replace_whitespace=False))
+        lines.extend(
+            textwrap.wrap(
+                para,
+                width=max_chars,
+                break_long_words=False,
+                replace_whitespace=False,
+            )
+        )
 
     line_height = 14
     for line in lines:
@@ -97,6 +108,16 @@ def build_payload(dava_turu: str, kisa_karar: str, deliller: list, ceza_puanlari
     return payload
 
 
+def map_case_type(ui_value: str) -> str:
+    """
+    UI seçeneklerini API'nin beklediği değerlere çevir.
+    API tarafında CEZA özel; hukuk için HUKUK kullanıyoruz.
+    """
+    if ui_value == "CEZA":
+        return "CEZA"
+    return "HUKUK"
+
+
 # ---------------------------
 # UI
 # ---------------------------
@@ -109,8 +130,13 @@ st.caption("Kısa karar + deliller → Gerekçeli karar (FastAPI üzerinden).")
 with st.sidebar:
     st.header("Ayarlar")
 
-    dava_turu = st.selectbox("Dava Türü", ["OZEL_HUKUK", "CEZA"], index=0)
-    endpoint = st.text_input("API Endpoint", value="http://127.0.0.1:8000/generate")
+    dava_turu_ui = st.selectbox("Dava Türü", ["HUKUK", "CEZA"], index=0)
+    dava_turu = map_case_type(dava_turu_ui)
+
+    # Base URL gösterelim (endpoint değil)
+    api_base_url_input = st.text_input("API Base URL", value=API_BASE_URL, help="Örn: http://127.0.0.1:8000 veya https://ratioai.onrender.com")
+    api_base_url = (api_base_url_input or "").strip().rstrip("/")
+    endpoint = f"{api_base_url}/generate"
 
     st.divider()
 
@@ -178,6 +204,8 @@ with col1:
 
 with col2:
     st.header("Gerekçeli Karar")
+    st.caption(f"İstek atılan endpoint: {endpoint}")
+
     generate_btn = st.button("🚀 Gerekçeli Karar Üret", type="primary")
 
     if generate_btn:
@@ -213,7 +241,6 @@ with col2:
     if karar:
         st.text_area("Çıktı", value=karar, height=520)
 
-        # PDF indir
         pdf_bytes = make_pdf_bytes("Gerekçeli Karar (RatioAI Demo)", karar)
         st.download_button(
             "📄 Gerekçeli Kararı PDF İndir",
