@@ -1,0 +1,30 @@
+{"id": "HMK-24", "title": "HMK m.24 (Tasarruf ilkesi)", "text": "Hâkim, tarafların talep sonuçlarıyla bağlıdır; ondan fazlasına veya başka bir şeye karar veremez.", "source": "HMK", "demo": true}
+{"id": "HMK-25", "title": "HMK m.25 (Taraflarca getirilme ilkesi)", "text": "Hâkim, tarafların ileri sürmediği vakıaları kendiliğinden dikkate alamaz.", "source": "HMK", "demo": true}
+{"id": "HMK-27", "title": "HMK m.27 (Hukuki dinlenilme hakkı)", "text": "Taraflar, yargılama boyunca bilgi sahibi olma, açıklama ve ispat hakkına sahiptir.", "source": "HMK", "demo": true}
+{"id": "HMK-31", "title": "HMK m.31 (Hâkimin davayı aydınlatma ödevi)", "text": "Hâkim, uyuşmazlığın aydınlatılması için gerekli gördüğü açıklamayı taraflardan isteyebilir.", "source": "HMK", "demo": true}
+{"id": "HMK-33", "title": "HMK m.33 (Hâkimin hukuku uygulaması)", "text": "Hâkim, Türk hukukunu resen uygular.", "source": "HMK", "demo": true}
+{"id": "HMK-119", "title": "HMK m.119 (Dava dilekçesinin içeriği)", "text": "Dava dilekçesinde taraflar, talepler, vakıalar ve deliller yer alır.", "source": "HMK", "demo": true}
+{"id": "HMK-190", "title": "HMK m.190 (İspat yükü)", "text": "Kanunda aksine hüküm bulunmadıkça, iddia edilen vakıaya bağlanan hukuki sonuçtan kendi lehine hak çıkaran taraf ispatla yükümlüdür.", "source": "HMK", "demo": true}
+{"id": "HMK-266", "title": "HMK m.266 (Bilirkişi)", "text": "Çözümü özel veya teknik bilgiyi gerektiren hallerde bilirkişiye başvurulur.", "source": "HMK", "demo": true}
+{"id": "HMK-281", "title": "HMK m.281 (Bilirkişi raporuna itiraz)", "text": "Taraflar rapora itiraz edebilir; hâkim gerekli görürse ek rapor alabilir.", "source": "HMK", "demo": true}
+{"id": "HMK-297", "title": "HMK m.297 (Hükmün kapsamı)", "text": "Hüküm sonucu, gerekçe ve yargılama giderleri gibi unsurları içerir.", "source": "HMK", "demo": true}
+{"id": "TBK-49", "title": "TBK m.49 (Haksız fiil sorumluluğu)", "text": "Kusurlu ve hukuka aykırı fiille başkasına zarar veren, bu zararı gidermekle yükümlüdür.", "source": "TBK", "demo": true}
+{"id": "TBK-50", "title": "TBK m.50 (İspat)", "text": "Zarar gören, zararı ve zarar verenin kusurunu ispatla yükümlüdür.", "source": "TBK", "demo": true}
+{"id": "TBK-51", "title": "TBK m.51 (Tazminatın belirlenmesi)", "text": "Hâkim, tazminatın kapsamını ve ödenme biçimini durumun gereklerine göre belirler.", "source": "TBK", "demo": true}
+{"id": "TBK-52", "title": "TBK m.52 (İndirim sebepleri)", "text": "Zarar görenin rızası, birlikte kusur veya diğer sebepler tazminatı azaltabilir.", "source": "TBK", "demo": true}
+{"id": "TBK-56", "title": "TBK m.56 (Manevi tazminat)", "text": "Hâkim, olayın özelliklerini göz önüne alarak manevi tazminata hükmedebilir.", "source": "TBK", "demo": true}
+{"id": "TBK-97", "title": "TBK m.97 (Ödemezlik def’i)", "text": "Karşılıklı borçlarda ifa sırasına göre ödemezlik def’i ileri sürülebilir.", "source": "TBK", "demo": true}
+{"id": "TBK-112", "title": "TBK m.112 (Borçlunun sorumluluğu)", "text": "Borçlu, borcun hiç/eksik ifasından doğan zararı gidermekle yükümlü olabilir.", "source": "TBK", "demo": true}
+{"id": "TBK-117", "title": "TBK m.117 (Temerrüt)", "text": "Borçlu, alacaklının ihtarıyla temerrüde düşer; kanunda sayılan hallerde ihtar gerekmez.", "source": "TBK", "demo": true}
+{"id": "TBK-138", "title": "TBK m.138 (Aşırı ifa güçlüğü)", "text": "Koşulları varsa sözleşmenin uyarlanması veya feshi talep edilebilir.", "source": "TBK", "demo": true}
+{"id": "TMK-2", "title": "TMK m.2 (Dürüstlük kuralı)", "text": "Herkes haklarını kullanırken ve borçlarını yerine getirirken dürüstlük kurallarına uymak zorundadır.", "source": "TMK", "demo": true}
+{"id": "TMK-3", "title": "TMK m.3 (İyi niyet)", "text": "Kanunun iyiniyete hukuki sonuç bağladığı durumlarda asıl olan iyiniyetin varlığıdır.", "source": "TMK", "demo": true}
+{"id": "TMK-6", "title": "TMK m.6 (İspat yükü)", "text": "Kanunda aksine hüküm bulunmadıkça taraflardan her biri iddiasını ispatla yükümlüdür.", "source": "TMK", "demo": true}
+{"id": "TMK-24", "title": "TMK m.24 (Kişilik haklarının korunması)", "text": "Kişilik hakkı saldırıya uğrayan, hâkimden korunma isteyebilir.", "source": "TMK", "demo": true}
+{"id": "TMK-25", "title": "TMK m.25 (Dava hakları)", "text": "Durdurma, önleme, tespit vb. talepler ileri sürülebilir.", "source": "TMK", "demo": true}
+{"id": "TMK-683", "title": "TMK m.683 (Mülkiyet hakkı)", "text": "Malik, malını kullanma, yararlanma ve tasarruf etme yetkilerine sahiptir.", "source": "TMK", "demo": true}
+{"id": "TTK-4", "title": "TTK m.4 (Ticari davalar)", "text": "Bazı uyuşmazlıklar ticari dava sayılır ve ticari hükümler uygulanır.", "source": "TTK", "demo": true}
+{"id": "TTK-18", "title": "TTK m.18 (Tacir gibi davranma)", "text": "Tacir, tüm faaliyetlerinde basiretli bir iş insanı gibi hareket etmek zorundadır.", "source": "TTK", "demo": true}
+{"id": "IİK-67", "title": "İİK m.67 (İtirazın iptali)", "text": "Şartları varsa itirazın iptali ve icra inkâr tazminatına hükmedilebilir.", "source": "IİK", "demo": true}
+{"id": "IİK-72", "title": "İİK m.72 (Menfi tespit/istirdat)", "text": "Borçlu olmadığını iddia eden, menfi tespit davası açabilir; şartları varsa istirdat talep edebilir.", "source": "IİK", "demo": true}
+{"id": "TCK-21", "title": "TCK m.21 (Kast)", "text": "Suçun oluşması kastın varlığına bağlıdır; kastın kapsamı değerlendirilir.", "source": "TCK", "demo": true}
