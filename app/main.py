@@ -3,7 +3,7 @@ import os
 import json
 import urllib.request
 import urllib.error
-from typing import List, Optional
+from typing import List
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
@@ -46,6 +46,9 @@ retriever = Retriever(law_docs, prec_docs)
 
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://127.0.0.1:11434")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:7b-instruct")
+
+# ✅ Mock modu (Render'da LLM yoksa bile /generate çalışsın)
+USE_MOCK_LLM = os.getenv("USE_MOCK_LLM", "0") == "1"
 
 
 def llm_generate(prompt: str) -> str:
@@ -98,21 +101,70 @@ def to_schema_docs(docs) -> List[RetrievedDoc]:
     return [RetrievedDoc(id=d.id, title=d.title, text=d.text, meta=d.meta) for d in docs]
 
 
+def mock_generate_decision(
+    req: GenerateRequest,
+    laws,
+    precedents,
+    criminal_scoring,
+) -> str:
+    """
+    LLM yokken demo için stabil "gerekçeli karar" üretir.
+    Retrieval sonuçlarını (ilk 5) ve ceza skorunu (varsa) raporlar.
+    """
+    law_titles = "\n".join([f"- {d.title}" for d in (laws or [])[:5]]) or "- (bulunamadı)"
+    prec_titles = "\n".join([f"- {d.title}" for d in (precedents or [])[:5]]) or "- (bulunamadı)"
+
+    score_text = ""
+    if req.dava_turu == "CEZA" and criminal_scoring is not None:
+        score_text = f"\n\nCEZA PUANLAMASI (DEMO):\n{criminal_scoring}"
+
+    evid_text = "\n".join([f"- {e.name}: {e.content}" for e in (req.deliller or [])]) or "- (sunulmadı)"
+
+    text = f"""
+MAHKEMESİ: RatioAI Sanal Mahkeme (DEMO)
+DOSYA TÜRÜ: {req.dava_turu}
+
+OLAY / TALEP:
+{req.kisa_karar}
+
+DELİLLER:
+{evid_text}
+
+HUKUKİ DEĞERLENDİRME:
+Bu karar demo (mock) modunda oluşturulmuştur. Sistem, olay anlatımı ve delillere göre
+ilgili mevzuat ve emsal dokümanları eşleştirir ve gerekçeli karar taslağı üretir.
+
+KULLANILAN MEVZUAT (İlk 5):
+{law_titles}
+
+KULLANILAN EMSALLER (İlk 5):
+{prec_titles}
+{score_text}
+
+HÜKÜM (DEMO):
+Tarafların beyanları ve dosya kapsamı birlikte değerlendirilmiş olup, bu metin yalnızca
+sistemin işleyişini göstermek amacıyla üretilmiştir; nihai yargısal karar yerine geçmez.
+"""
+    return format_gerekceli_karar(text.strip(), req.dava_turu)
+
+
 @app.get("/", response_class=HTMLResponse)
 def home():
-    return """
+    mock_badge = "AÇIK ✅" if USE_MOCK_LLM else "KAPALI ❌"
+    return f"""
     <h2>RatioAI Hakim Simülasyonu API ✅</h2>
     <ul>
       <li><a href="/docs">/docs</a> (Swagger UI)</li>
       <li><a href="/healthz">/healthz</a> (health check)</li>
     </ul>
-    <p>Not: /generate endpoint'i için LLM (Ollama) erişimi gerekir.</p>
+    <p><b>Mock mode:</b> {mock_badge}</p>
+    <p>Not: /generate endpoint'i için LLM (Ollama) erişimi gerekir. LLM yoksa mock moda düşebilir.</p>
     """
 
 
 @app.get("/healthz")
 def healthz():
-    return {"ok": True, "version": "0.2.0"}
+    return {"ok": True, "version": "0.2.0", "mock_mode": USE_MOCK_LLM}
 
 
 @app.post("/generate", response_model=GenerateResponse)
@@ -158,14 +210,16 @@ def generate(req: GenerateRequest):
         criminal_scoring=criminal_scoring,
     )
 
-    try:
-        karar = llm_generate(prompt)
-    except RuntimeError as e:
-        # API tüketen kişi için daha anlaşılır HTTP kodu
-        raise HTTPException(status_code=502, detail=str(e))
-
-    # ✅ Çıktı formatını "mahkeme kararı" görünümüne zorla (post-process)
-    karar = format_gerekceli_karar(karar, req.dava_turu)
+    # ✅ Mock mode açık ise direkt demo üret
+    if USE_MOCK_LLM:
+        karar = mock_generate_decision(req, laws, precedents, criminal_scoring)
+    else:
+        # ✅ Mock mode kapalı ama LLM çökerse otomatik demo moda düş
+        try:
+            karar = llm_generate(prompt)
+            karar = format_gerekceli_karar(karar, req.dava_turu)
+        except RuntimeError:
+            karar = mock_generate_decision(req, laws, precedents, criminal_scoring)
 
     warnings: List[str] = []
     warnings += validate_has_sections(karar)
