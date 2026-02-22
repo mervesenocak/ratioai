@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 
 from app.schemas import GenerateRequest, GenerateResponse, RetrievedDoc
 from app.core.retrieval import Retriever, load_jsonl
-from app.core.prompting import build_prompt
+from app.core.prompting import build_prompt, format_gerekceli_karar
 from app.core.scoring import score_criminal
 from app.core.validators import validate_has_sections, warn_demo_sources
 
@@ -66,6 +66,12 @@ def to_schema_docs(docs):
     return [RetrievedDoc(id=d.id, title=d.title, text=d.text, meta=d.meta) for d in docs]
 
 
+# (opsiyonel ama çok işe yarar) Sağlık kontrol endpoint'i
+@app.get("/healthz")
+def healthz():
+    return {"ok": True}
+
+
 @app.post("/generate", response_model=GenerateResponse)
 def generate(req: GenerateRequest):
     ev_text = ""
@@ -100,6 +106,9 @@ def generate(req: GenerateRequest):
     )
 
     karar = llm_generate(prompt)
+
+    # ✅ Çıktı formatını "mahkeme kararı" görünümüne zorla (post-process)
+    karar = format_gerekceli_karar(karar, req.dava_turu)
 
     warnings = []
     warnings += validate_has_sections(karar)
