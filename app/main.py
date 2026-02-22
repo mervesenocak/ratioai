@@ -3,8 +3,10 @@ import os
 import json
 import urllib.request
 import urllib.error
+from typing import List, Optional
 
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import HTMLResponse
 from dotenv import load_dotenv
 
 from app.schemas import GenerateRequest, GenerateResponse, RetrievedDoc
@@ -22,8 +24,24 @@ DATA_DIR = BASE_DIR / "data"
 LAW_PATH = DATA_DIR / "laws" / "laws.jsonl"
 PREC_PATH = DATA_DIR / "precedents" / "precedents.jsonl"
 
-law_docs = load_jsonl(LAW_PATH, kind="law")
-prec_docs = load_jsonl(PREC_PATH, kind="precedent")
+# Render / prod ortamında dosyalar yoksa uygulama açılır ama generate çalışmaz.
+# Bu yüzden güvenli şekilde yükleyelim.
+law_docs = []
+prec_docs = []
+
+try:
+    if LAW_PATH.exists():
+        law_docs = load_jsonl(LAW_PATH, kind="law")
+    else:
+        print(f"[WARN] LAW_PATH not found: {LAW_PATH}")
+
+    if PREC_PATH.exists():
+        prec_docs = load_jsonl(PREC_PATH, kind="precedent")
+    else:
+        print(f"[WARN] PREC_PATH not found: {PREC_PATH}")
+except Exception as e:
+    print(f"[WARN] Failed loading data files: {e}")
+
 retriever = Retriever(law_docs, prec_docs)
 
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://127.0.0.1:11434")
@@ -31,7 +49,11 @@ OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:7b-instruct")
 
 
 def llm_generate(prompt: str) -> str:
-    url = f"{OLLAMA_URL}/api/generate"
+    """
+    Ollama /api/generate çağrısı.
+    Render'da localhost ollama yoksa bu çağrı başarısız olur.
+    """
+    url = f"{OLLAMA_URL.rstrip('/')}/api/generate"
     payload = {
         "model": OLLAMA_MODEL,
         "prompt": prompt,
@@ -42,6 +64,7 @@ def llm_generate(prompt: str) -> str:
             "num_ctx": 8192,
         },
     }
+
     data = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(
         url,
@@ -52,28 +75,58 @@ def llm_generate(prompt: str) -> str:
 
     try:
         with urllib.request.urlopen(req, timeout=180) as resp:
-            body = resp.read().decode("utf-8")
+            body = resp.read().decode("utf-8", errors="ignore")
             obj = json.loads(body)
-            return obj.get("response", "").strip()
+            return (obj.get("response") or "").strip()
+
     except urllib.error.HTTPError as e:
         detail = e.read().decode("utf-8", errors="ignore")
         raise RuntimeError(f"Ollama HTTPError: {e.code} {e.reason} | {detail}")
+
+    except urllib.error.URLError as e:
+        # Ollama'ya erişememe (en sık Render'da olur)
+        raise RuntimeError(
+            f"Ollama URL error: {e}. OLLAMA_URL={OLLAMA_URL}. "
+            "Render'da local ollama çalışmaz; dış erişilebilir bir Ollama endpoint'i vermelisin."
+        )
+
     except Exception as e:
         raise RuntimeError(f"Ollama request failed: {e}")
 
 
-def to_schema_docs(docs):
+def to_schema_docs(docs) -> List[RetrievedDoc]:
     return [RetrievedDoc(id=d.id, title=d.title, text=d.text, meta=d.meta) for d in docs]
 
 
-# (opsiyonel ama çok işe yarar) Sağlık kontrol endpoint'i
+@app.get("/", response_class=HTMLResponse)
+def home():
+    return """
+    <h2>RatioAI Hakim Simülasyonu API ✅</h2>
+    <ul>
+      <li><a href="/docs">/docs</a> (Swagger UI)</li>
+      <li><a href="/healthz">/healthz</a> (health check)</li>
+    </ul>
+    <p>Not: /generate endpoint'i için LLM (Ollama) erişimi gerekir.</p>
+    """
+
+
 @app.get("/healthz")
 def healthz():
-    return {"ok": True}
+    return {"ok": True, "version": "0.2.0"}
 
 
 @app.post("/generate", response_model=GenerateResponse)
 def generate(req: GenerateRequest):
+    # Veri dosyaları yüklenmemişse anlamlı hata
+    if not law_docs or not prec_docs:
+        raise HTTPException(
+            status_code=500,
+            detail=(
+                "Data files are not loaded. Ensure data/laws/laws.jsonl and "
+                "data/precedents/precedents.jsonl exist in the deployed environment."
+            ),
+        )
+
     ev_text = ""
     if req.deliller:
         ev_text = "\n".join([f"{e.name}: {e.content}" for e in req.deliller])
@@ -105,12 +158,16 @@ def generate(req: GenerateRequest):
         criminal_scoring=criminal_scoring,
     )
 
-    karar = llm_generate(prompt)
+    try:
+        karar = llm_generate(prompt)
+    except RuntimeError as e:
+        # API tüketen kişi için daha anlaşılır HTTP kodu
+        raise HTTPException(status_code=502, detail=str(e))
 
     # ✅ Çıktı formatını "mahkeme kararı" görünümüne zorla (post-process)
     karar = format_gerekceli_karar(karar, req.dava_turu)
 
-    warnings = []
+    warnings: List[str] = []
     warnings += validate_has_sections(karar)
     warnings += warn_demo_sources(laws, precedents)
 

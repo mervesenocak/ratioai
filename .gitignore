@@ -1,19 +1,7 @@
-# Python
+venv/
+.venv/
 __pycache__/
 *.pyc
-
-# Virtual environment
-.venv/
-
-# Env files
 .env
-
-# OS
+.vscode/
 .DS_Store
-Thumbs.db
-
-# Streamlit
-.streamlit/
-
-# Large local models
-*.gguf
